@@ -1,0 +1,34 @@
+#Adapted from https://github.com/StaPH-B/docker-builds/blob/master/kraken2/2.1.2/Dockerfile
+Bootstrap: docker
+From: ubuntu:xenial
+
+%labels
+  Maintainer patrick.cudahy@yale.edu
+  Version 1.0
+
+% post
+# install dependencies and cleanup apt garbage
+ apt-get update && apt-get -y --no-install-recommends install wget ca-certificates zlib1g-dev make g++ rsync cpanminus
+ rm -rf /var/lib/apt/lists/* 
+ apt-get autoclean
+
+# DL Kraken2, unpack, and install
+ export K2VER="2.1.1"
+ wget https://github.com/DerrickWood/kraken2/archive/v${K2VER}.tar.gz
+ tar -xzf v${K2VER}.tar.gz
+ rm -rf v${K2VER}.tar.gz
+ cd kraken2-${K2VER}
+ ./install_kraken2.sh .
+ mkdir /data /kraken2-db
+ echo "export ENV PATH="$PATH:/kraken2-${K2VER}"" >> $SINGULARITY_ENVIRONMENT
+
+# Get database
+# --strip-components=1 used so that the *.k2d files end up inside /kraken2-db and not another directory
+ cd /kraken2-db 
+ wget --no-verbose --continue https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_20210517.tar.gz
+ tar xzvf --strip-components=1 k2_pluspf_20210517.tar.gz
+ rm -rf k2_pluspf_20210517.tar.gz
+ cp /kraken2-db/*k2d /dev/shm
+
+%environment
+ export LC_ALL=C
